@@ -1,6 +1,6 @@
 # gh-pages-swagger-ui-experiment
 
-This is an experiment of hosting the Swagger-UI as GH pages, so it can be used to display Swagger documentation for APIs for a repository containing the OpenAPI/Swagger definition.
+This is an experiment of hosting the Swagger-UI as GH pages, so it can be used to display Swagger documentation for APIs for a repository containing the OpenAPI/Swagger definition iself.
 
 The repository is structured as follows:
 
@@ -20,11 +20,11 @@ mkdir api-docs
 
 The Swagger-UI was downloaded and the relevant files where extracted into the `api-docs` directory:
 
-1. Downloaded the swagger-ui, do note the version number was the one available at the time of the experiment, do fetch the newest version available:
-
 ```bash
 curl -X GET https://github.com/swagger-api/swagger-ui/releases/tag/v5.17.14
 ```
+
+Do note the version number was the one available at the time of the experiment, do fetch the newest version available.
 
 The files are unpacked:
 
@@ -84,20 +84,53 @@ Since we can [serve multiple API definitions][MULTIPLE], we can add multiple URL
     ],
 ```
 
-When the changes have been committed and pushed and the GitHub pages have been enabled for the repository, the Swagger-UI can be accessed using the following URL:
+The file is with the definition is also served from GitHub pages as: `https://jonasbn.github.io/gh-pages-swagger-ui-experiment/swagger.json`, so it is easy to consume for clients etc.
 
-```html
-https://jonasbn.github.io/gh-pages-swagger-ui-experiment/api-docs/
-```
+When the changes have been committed and pushed and the , the Swagger-UI can be accessed using the following URL:
+
+- https://jonasbn.github.io/gh-pages-swagger-ui-experiment/api-docs/
 
 So now we serve the Swagger-UI as a static site using GH pages.
 
+Do note GitHub pages have been enabled for the repository.
+
 It works as expected and is fetching the `swagger.json` file from the repository in addition to the remote file and the file we service our selves, just as a proof of concept.
+
+I have tested calling a few API endpoints directly from the page and it works as expected - this does make it much easier to have both the specification under version control and to serve it with the Swagger-UI, without having to set up a server or a service to serve the Swagger-UI, like: [swagger-ui-express](https://www.npmjs.com/package/swagger-ui-express) - which is a fine piece of software, but it is not necessary, as just demonstrated.
+
+## Extras
+
+Finally I have added a GitHub Action to validate the Swagger definition file using the `swagger-validator` action.:
+
+```yaml
+on: push
+name: Validate API swagger definition file
+jobs:
+  validate:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Get OpenAPI/Swagger definition file
+      uses: actions/checkout@v4
+    - name: Validate OpenAPI/Swagger definition file
+      uses: mbowman100/swagger-validator-action@master
+      with:
+        files: swagger.json
+```
+
+REF: `.github/workflows/swagger-validator.yml`
+
+Do note that the action is based on [swagger-cli][[SWAGGERCLI] which is deprecated, so I am looking for an alternative.
 
 ## Resources and References
 
 - [SwaggerUI installation][SWAGGERUI]
 - [StackOverflow: Swagger UI with Multiple URLs][MULTIPLE]
+- [GitHub Marketplace: Validate Swagger and OpenAPI using swagger-cli][VALIDATIONACTION]
+- [GitHub: swagger-cli][SWAGGERCLI]
 
 [SWAGGERUI]: https://swagger.io/docs/open-source-tools/swagger-ui/usage/installation
 [MULTIPLE]: https://stackoverflow.com/questions/44816594/swagger-ui-with-multiple-urls
+[VALIDATIONACTION]: https://github.com/marketplace/actions/validate-swagger-and-openapi-using-swagger-cli
+[SWAGGERCLI]: https://apitools.dev/swagger-cli/

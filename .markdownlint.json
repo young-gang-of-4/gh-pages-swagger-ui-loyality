@@ -1,0 +1,5 @@
+{
+	"root": true,
+	"no-bare-urls": false,
+	"line-length": false
+}
