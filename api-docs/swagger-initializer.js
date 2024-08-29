@@ -5,6 +5,10 @@ window.onload = function() {
   window.ui = SwaggerUIBundle({
     urls: [
       {
+        url: "../swagger.json",
+        name: "The local file from the repository"
+      },
+      {
         url: "https://jonasbn.github.io/gh-pages-swagger-ui-experiment/swagger.json",
         name: "The local Swagger Petstore"
       },
