@@ -123,6 +123,14 @@ REF: `.github/workflows/swagger-validator.yml`
 
 Do note that the action is based on [swagger-cli][[SWAGGERCLI] which is deprecated, so I am looking for an alternative.
 
+Finally I need to work out the process of updating the contents of the `api-docs/` directory in the repository from the Swagger-UI `dist/` directory, so I can keep the Swagger-UI up-to-date.
+
+For now I have signed for notifications on releases and secutiry announcements.
+
+## Caveats
+
+- [GitHub pages](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages) are public.
+
 ## Resources and References
 
 - [SwaggerUI installation][SWAGGERUI]
