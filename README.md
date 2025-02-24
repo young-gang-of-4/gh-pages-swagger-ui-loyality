@@ -125,7 +125,134 @@ Do note that the action is based on [swagger-cli][[SWAGGERCLI] which is deprecat
 
 Finally I need to work out the process of updating the contents of the `api-docs/` directory in the repository from the Swagger-UI `dist/` directory, so I can keep the Swagger-UI up-to-date.
 
-For now I have signed for notifications on releases and security announcements.
+I have signed for notifications on releases and security announcements and I have created this little Perl script to compare:
+
+- `api-docs/` directory
+- `dist/` directory
+
+```perl
+#!/usr/bin/env perl
+
+use warnings;
+use strict;
+use Data::Dumper;
+use File::Find;
+use Crypt::Digest::SHA256 qw(sha256_file_hex);
+
+my $baseline_directory = $ARGV[0];
+my $new_directory = $ARGV[1];
+
+if (scalar(@ARGV) != 2) {
+    print "Usage: $0 <new_directory> <baseline_directory>\n";
+    exit 1;
+}
+
+if (! -d $new_directory) {
+    print "New directory does not exist\n";
+    exit 1;
+}
+
+if (! -d $baseline_directory) {
+    print "Baseline directory does not exist\n";
+    exit 1;
+}
+
+my %baseline_files;
+
+my @updated_files;
+my @new_files;
+my @unchanged_files;
+
+find(\&handle_baseline, $baseline_directory);
+
+find(\&handle_new, $new_directory);
+
+my @deleted_files = keys %baseline_files;
+
+print STDERR 'New files: ', Dumper \@new_files;
+print STDERR 'Updated files: ', Dumper \@updated_files;
+print STDERR 'Deleted files: ', Dumper \@deleted_files;
+print STDERR 'Unchanged files: ', Dumper \@unchanged_files;
+
+exit 0;
+
+sub handle_baseline {
+    -f $_ && -r $_ or return;
+    
+    my $baseline_file = $File::Find::name;
+
+    $baseline_files{$_} = sha256_file_hex($_);
+        
+}
+
+sub handle_new {
+    -f $_ && -r $_ or return;
+
+    my $new_file = $_;
+
+    if (grep { $_ eq $new_file } keys %baseline_files) {
+
+        if (sha256_file_hex($new_file) eq $baseline_files{$new_file}) {
+            push @unchanged_files, $new_file;
+        } else {
+            push @updated_files, $new_file;
+        }
+        delete $baseline_files{$new_file};
+    } else {
+        push @new_files, $new_file;
+    }
+}
+```
+
+Do note the scipt relies on the `Crypt::Digest::SHA256` module, which can be installed using `cpan`:
+
+```bash
+cpanm Crypt::Digest::SHA256
+```
+
+And does currently not handle subdirectories, it could be changed to do so, but I do not believe it is necessary at the moment.
+
+```bash
+perl compare_directories.pl dist api-docs
+```
+
+With release [5.19.0](https://github.com/swagger-api/swagger-ui/releases/tag/v5.19.0) the `swagger-ui` the output would look as follows, running it in the root of the repository:
+
+```bash
+compare_directories.pl ~/Downloads/swagger-ui-5.19.0/dist api-docs
+New files: $VAR1 = [];
+Updated files: $VAR1 = [
+          'swagger-ui-es-bundle-core.js.map',
+          'swagger-ui.js',
+          'swagger-ui-es-bundle-core.js',
+          'swagger-ui.css',
+          'swagger-ui.js.map',
+          'swagger-ui-bundle.js',
+          'swagger-ui.css.map',
+          'swagger-ui-standalone-preset.js',
+          'swagger-initializer.js',
+          'swagger-ui-es-bundle.js'
+        ];
+Deleted files: $VAR1 = [];
+Unchanged files: $VAR1 = [
+          'favicon-16x16.png',
+          'index.html',
+          'swagger-ui-standalone-preset.js.map',
+          'index.css',
+          'swagger-ui-es-bundle.js.map',
+          'swagger-ui-bundle.js.map',
+          'oauth2-redirect.html',
+          'favicon-32x32.png'
+        ];
+```
+
+Then I should be able to do a `cp` of the files in the `Updated files` list to the `api-docs/` directory.
+
+The interesting part here is detected that it has changed and just copying the lot.
+
+```bash
+cp -v -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
+```
 
 ## Caveats
 
