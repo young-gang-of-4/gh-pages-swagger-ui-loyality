@@ -254,6 +254,39 @@ The interesting part here is detected that it has changed and just copying the l
 cp -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
 ```
 
+## Local Testing
+
+To Test Locally you have to do the following steps.
+
+Do note you need:
+
+- Ruby
+- Bundler
+
+---
+
+- Clone the repository
+- Navigate to the repository root
+- Install Jekyll and the dependencies:
+
+```bash
+bundle install
+```
+
+- Start a web server, e.g.:
+
+```bash
+bundle exec jekyll serve
+```
+
+- Open a browser and navigate to the Swagger-UI:
+
+```bash
+open http://localhost:4000/gh-pages-swagger-ui-experiment/api-docs/
+```
+
+And then you can test the GitHub Pages with Swagger-UI swag locally.
+
 ## Caveats
 
 - [GitHub pages](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages) are public.
@@ -264,6 +297,7 @@ cp -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
 - [StackOverflow: Swagger UI with Multiple URLs][MULTIPLE]
 - [GitHub Marketplace: Validate Swagger and OpenAPI using swagger-cli][VALIDATIONACTION]
 - [GitHub: swagger-cli][SWAGGERCLI]
+- [GitHub: Test locally with Jekyll](https://docs.github.com/en/pages/setting-up-a-github-pages-site-with-jekyll/testing-your-github-pages-site-locally-with-jekyll)
 
 [SWAGGERUI]: https://swagger.io/docs/open-source-tools/swagger-ui/usage/installation
 [MULTIPLE]: https://stackoverflow.com/questions/44816594/swagger-ui-with-multiple-urls
