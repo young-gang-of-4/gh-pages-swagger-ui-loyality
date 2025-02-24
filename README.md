@@ -256,7 +256,7 @@ cp -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
 
 ## Local Testing
 
-To Test Locally you have to do the following steps.
+To test locally you have to do the following steps.
 
 Do note you need:
 
