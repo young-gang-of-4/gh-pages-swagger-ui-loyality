@@ -125,7 +125,7 @@ Do note that the action is based on [swagger-cli][[SWAGGERCLI] which is deprecat
 
 Finally I need to work out the process of updating the contents of the `api-docs/` directory in the repository from the Swagger-UI `dist/` directory, so I can keep the Swagger-UI up-to-date.
 
-For now I have signed for notifications on releases and secutiry announcements.
+For now I have signed for notifications on releases and security announcements.
 
 ## Caveats
 
