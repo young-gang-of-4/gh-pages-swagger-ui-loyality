@@ -287,6 +287,8 @@ open http://localhost:4000/gh-pages-swagger-ui-experiment/api-docs/
 
 And then you can test the GitHub Pages with Swagger-UI swag locally.
 
+Do note if you have made changes to: `swagger-initializer.js` you need to reapply these changes to the file in the `dist/` directory, since it has possibly been overwritten with the update.
+
 ## Caveats
 
 - [GitHub pages](https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages) are public.
