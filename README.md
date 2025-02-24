@@ -251,7 +251,7 @@ Then I should be able to do a `cp` of the files in the `Updated files` list to t
 The interesting part here is detected that it has changed and just copying the lot.
 
 ```bash
-cp -v -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
+cp -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
 ```
 
 ## Caveats
