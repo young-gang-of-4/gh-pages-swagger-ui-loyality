@@ -4,7 +4,7 @@ This is an experiment of hosting the Swagger-UI as GH pages, so it can be used t
 
 The repository is structured as follows:
 
-- `api-docs` - directory containing the Swagger-UI
+- `api-docs` - directory containing the Swagger-UI ([demo](https://jonasbn.github.io/gh-pages-swagger-ui-experiment/api-docs/))
 - `swagger.json` - the OpenAPI/Swagger definition
 - `README.md` - this file (documentation describing the experiment)
 
@@ -216,10 +216,10 @@ And does currently not handle subdirectories, it could be changed to do so, but 
 perl compare_directories.pl dist api-docs
 ```
 
-With release [5.19.0](https://github.com/swagger-api/swagger-ui/releases/tag/v5.19.0) the `swagger-ui` the output would look as follows, running it in the root of the repository:
+With release [5.22.0](https://github.com/swagger-api/swagger-ui/releases/tag/v5.22.0) the `swagger-ui` the output would look as follows, running it in the root of the repository:
 
 ```bash
-compare_directories.pl ~/Downloads/swagger-ui-5.19.0/dist api-docs
+compare_directories.pl ~/Downloads/swagger-ui-5.22.0/dist api-docs
 New files: $VAR1 = [];
 Updated files: $VAR1 = [
           'swagger-ui-es-bundle-core.js.map',
@@ -251,8 +251,10 @@ Then I should be able to do a `cp` of the files in the `Updated files` list to t
 The interesting part here is detected that it has changed and just copying the lot.
 
 ```bash
-cp -R ~/Downloads/swagger-ui-5.19.0/dist/ api-docs/
+cp -R ~/Downloads/swagger-ui-5.22.0/dist/ api-docs/
 ```
+
+Alternativly to downloading the tar-ball you could make a fork and clone it and then copy the files from the `dist/` directory to the `api-docs/` directory.
 
 ## Local Testing
 
