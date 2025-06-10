@@ -1,0 +1,473 @@
+openapi: 3.0.3
+info:
+  title: Loyalty & Promo API for Online Cinema
+  description: |
+    Система лояльности для онлайн-кинотеатра: покупка платной версии, триал, скидки, генерация промокодов, применение,
+    отслеживание отказов и откат, если оплата не прошла.
+    - "POST /subscribe { user_id, subscription_id }"
+    - "PATCH /subscribe/{subscribe_order_id} { user_id, promo_code }"
+    - "Backend проверяет код и возвращает price_after_discount"
+    - "Клиент платит price_after_discount"
+    - "Если провал — POST /promo/revert { user_id, promo_id, subscribe_id }"
+    - "Админ: GET /promo, GET /promo/{promo_id}, GET /promo/failures/{promo_id}"
+  version: "1.0.2"
+
+servers:
+  - url: https://api.yourcinema.example/v1
+    description: Основной продакшн сервер
+  - url: https://staging-api.yourcinema.example/v1
+    description: Стейджинг для тестов
+
+components:
+  schemas:
+    error_response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Invalid promo code"
+    404_error_response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 404
+        message:
+          type: string
+          example: "Not found"
+
+    subscribe_request:
+      type: object
+      required:
+        - user_id
+        - subscription_id
+      properties:
+        user_id:
+          type: string
+          description: ID пользователя в системе
+        subscription_id:
+          type: string
+          description: ID подписки в системе
+
+    subscribe_order_response:
+      type: object
+      properties:
+        subscribe_id:
+          type: string
+          description: Уникальный ID покупки
+        applied_promo_code:
+          type: string
+          nullable: true
+          description: Если промокод успешно применён, тут его код
+        price_before_discount:
+          type: number
+          format: float
+          description: Исходная сумма к оплате до учета скидки
+        price_after_discount:
+          type: number
+          format: float
+          description: Итоговая сумма к оплате после учёта скидки
+        status:
+          type: string
+          enum: [created, payment_pending, paid, payment_failed, cancelled]
+          description: Статус оплаты
+
+    promo_code:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Уникальный текст промокода
+        discount_percent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Процент скидки (M%)
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: Дата истечения срока (null = бессрочный)
+        usage_limit:
+          type: integer
+          nullable: true
+          description: Сколько раз можно применить (null = безлимит)
+        used_count:
+          type: integer
+          description: Сколько раз уже применили
+        single_use:
+          type: boolean
+          description: true = отрабатывает один раз и становится неактивным
+        multi_use:
+          type: boolean
+          description: true = действует до исчерпания usage_limit
+        description:
+          type: string
+          nullable: true
+          description: Заметка/назначение промокода
+
+    promo_code_response:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Внутренний ID промокода
+        code:
+          type: string
+        discount_percent:
+          type: integer
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        usage_limit:
+          type: integer
+          nullable: true
+        used_count:
+          type: integer
+        single_use:
+          type: boolean
+        multi_use:
+          type: boolean
+        is_active:
+          type: boolean
+          description: true = можно применять
+        description:
+          type: string
+          nullable: true
+
+    apply_promo_request:
+      type: object
+      required:
+        - user_id
+        - prome_code
+      properties:
+        user_id:
+          type: string
+        prome_code:
+          type: string
+
+    apply_promo_response:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        discount_percent:
+          type: integer
+        reason:
+          type: string
+          nullable: true
+          description: Причина отказа (если success=false)
+
+    revert_promo_request:
+      type: object
+      required:
+        - user_id
+        - promo_id
+        - subscribe_id
+      properties:
+        user_id:
+          type: string
+        promo_id:
+          type: string
+        subscribe_id:
+          type: string
+        reason:
+          type: string
+          nullable: true
+          description: Причина отката (например, оплата не прошла)
+
+    revert_promo_response:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          nullable: true
+
+  securitySchemes:
+    api_key_auth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - api_key_auth: []
+
+paths:
+  /subscribe:
+    post:
+      summary: "Создать покупку (платная версия или триал) с опциональным промокодом"
+      parameters:
+        - in: query
+          name: promo
+          required: false
+          schema:
+            type: string
+          description: |
+            Запрос на покупку: если promo = trial — это триал.
+            Если передан promo как query-параметр, система его проверит и вернёт скорректированную цену в price_after_discount.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/subscribe_request'
+      responses:
+        '201':
+          description: "Информация о созданной покупке"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_order_response'
+        '400':
+          description: "Неверный запрос или промокод недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /subscribe/{subscribe_order_id}:
+    patch:
+      summary: "Добавить промокод к существующей покупке подписки"
+      parameters:
+        - in: path
+          name: subscribe_order_id
+          required: true
+          schema:
+            type: string
+          description: Уникальный ID заказа подписки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/apply_promo_request'
+      responses:
+        '200':
+          description: "Обновлённый заказ подписки с учтённым промокодом"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_order_response'
+        '400':
+          description: "Невалидный запрос или промокод недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: "Заказ подписки не найден"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/404_error_response'
+
+  /promo:
+    post:
+      summary: "Сгенерировать новый promo code"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+                - discount_percent
+                - single_use
+              properties:
+                code:
+                  type: string
+                  description: Сам текст промокода, уникален
+                discount_percent:
+                  type: integer
+                  description: Скидка в процентах (0-100)
+                valid_until:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Дата истечения (если нужна)
+                usage_limit:
+                  type: integer
+                  nullable: true
+                  description: Лимит применений (если multi_use)
+                single_use:
+                  type: boolean
+                  description: true = одноразовый
+                multi_use:
+                  type: boolean
+                  description: true = многоразовый (нужен usage_limit)
+                description:
+                  type: string
+                  nullable: true
+      responses:
+        '201':
+          description: "Промокод создан"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/promo_code_response'
+        '400':
+          description: "Невалидные данные"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /promo/{promo_id}:
+    get:
+      summary: "Получить информацию о промокоде"
+      parameters:
+        - in: path
+          name: promo_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Данные промокода"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/promo_code_response'
+        '404':
+          description: "Не найден промокод"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/404_error_response'
+    delete:
+      summary: "Деактивировать промокод"
+      parameters:
+        - in: path
+          name: promo_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Промокод деактивирован"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          description: "Не найден промокод"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/404_error_response'
+
+  /promo/apply:
+    post:
+      summary: "Применить промокод вручную"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/apply_promo_request'
+      responses:
+        '200':
+          description: "Результат применения"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/apply_promo_response'
+        '400':
+          description: "Невалидный запрос или код недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /promo/revert:
+    post:
+      summary: "Откат применения промокода (если оплата не прошла)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/revert_promo_request'
+      responses:
+        '200':
+          description: "Промокод восстановлён (либо статус обновлён)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/revert_promo_response'
+        '400':
+          description: "Невалидный запрос"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /promo/generate:
+    post:
+      summary: "Массовая генерация промокодов"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - prefix
+                - count
+                - discount_percent
+                - single_use
+              properties:
+                prefix:
+                  type: string
+                  description: "Префикс для кода"
+                count:
+                  type: integer
+                  description: "Сколько кодов сгенерировать"
+                length:
+                  type: integer
+                  nullable: true
+                  default: 8
+                  description: "Длина кода вместе с префиксом"
+                discount_percent:
+                  type: integer
+                valid_until:
+                  type: string
+                  format: date-time
+                  nullable: true
+                usage_limit:
+                  type: integer
+                  nullable: true
+                single_use:
+                  type: boolean
+                multi_use:
+                  type: boolean
+      responses:
+        '201':
+          description: "Список сгенерированных кодов"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  generated:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: "Невалидные данные"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'

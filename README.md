@@ -74,7 +74,7 @@ Since we can [serve multiple API definitions][MULTIPLE], we can add multiple URL
         name: "The local file from the repository"
       },
       {
-        url: "https://jonasbn.github.io/gh-pages-swagger-ui-experiment/swagger.json",
+        url: "https://young-gang-of-4.github.io/gh-pages-swagger-ui-loyality/swagger.json",
         name: "The local Swagger Petstore"
       },
       {
@@ -84,11 +84,11 @@ Since we can [serve multiple API definitions][MULTIPLE], we can add multiple URL
     ],
 ```
 
-The file is with the definition is also served from GitHub pages as: `https://jonasbn.github.io/gh-pages-swagger-ui-experiment/swagger.json`, so it is easy to consume for clients etc.
+The file is with the definition is also served from GitHub pages as: `https://young-gang-of-4.github.io/gh-pages-swagger-ui-loyality/swagger.json`, so it is easy to consume for clients etc.
 
 When the changes have been committed and pushed and the , the Swagger-UI can be accessed using the following URL:
 
-- https://jonasbn.github.io/gh-pages-swagger-ui-experiment/api-docs/
+- https://young-gang-of-4.github.io/gh-pages-swagger-ui-loyality/api-docs/
 
 So now we serve the Swagger-UI as a static site using GH pages.
 
@@ -260,16 +260,32 @@ Alternativly to downloading the tar-ball you could make a fork and clone it and 
 
 To test locally you have to do the following steps.
 
-Do note you need:
-
-- Ruby
-- Bundler
-
 ---
 
 - Clone the repository
 - Navigate to the repository root
 - Install Jekyll and the dependencies:
+
+### Python
+
+- Start a web server, e.g.:
+
+```bash
+python3 -m http.server 8080 -d api-docs
+```
+
+- Open a browser and navigate to the Swagger-UI:
+
+```bash
+open http://localhost:8080/
+```
+
+### Jekyll
+
+Do note you need:
+
+- Ruby
+- Bundler
 
 ```bash
 bundle install
