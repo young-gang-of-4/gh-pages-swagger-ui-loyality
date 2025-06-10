@@ -4,14 +4,13 @@ info:
   version: 1.0.0
   description: |
     API for managing and validating promo codes
-    Система лояльности для онлайн-кинотеатра: покупка платной версии, триал, скидки, генерация промокодов, применение,
-    отслеживание отказов и откат, если оплата не прошла.
-    - "POST /subscribe { user_id, subscription_id }"
-    - "PATCH /subscribe/{subscribe_order_id} { user_id, promo_code }"
-    - "Backend проверяет код и возвращает price_after_discount"
-    - "Клиент платит price_after_discount"
-    - "Если провал — POST /promo/revert { user_id, promo_id, subscribe_id }"
-    - "Админ: GET /promo, GET /promo/{promo_id}, GET /promo/failures/{promo_id}"
+    Avaiable files to explore:
+      - ../base.yml
+      - ../promo2.yml
+      - ../promo.yml
+      - ../billing.yml
+      - ../subscriptions.yml
+
 
 servers:
   - url: https://api.yourcinema.example/v1
@@ -39,4 +38,4 @@ paths:
   /promo/generate:
     $ref: './promo.yml#/paths/~1promo~1generate'
   /api/v1/payments:
-    $ref: './mini_billing_service.yml#/paths/~1api~1v1~1payments'
+    $ref: './billing.yml#/paths/~1api~1v1~1payments'

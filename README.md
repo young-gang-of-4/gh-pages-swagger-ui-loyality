@@ -271,13 +271,13 @@ To test locally you have to do the following steps.
 - Start a web server, e.g.:
 
 ```bash
-python3 -m http.server 8080 -d api-docs
+python3 -m http.server 8080
 ```
 
 - Open a browser and navigate to the Swagger-UI:
 
 ```bash
-open http://localhost:8080/
+open http://localhost:8080/api-docs/
 ```
 
 ### Jekyll
