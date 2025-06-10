@@ -1,0 +1,126 @@
+openapi: 3.0.0
+info:
+  title: Mini-billing Service API
+  description: API for payment processing
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /api/v1/payments:
+    post:
+      summary: Process payment
+      description: Creates a new payment and returns its status
+      operationId: createPayment
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - Invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for API authentication
+
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - amount
+        - currency
+        - payment_method
+      properties:
+        amount:
+          type: number
+          format: float
+          description: Payment amount
+          example: 100.50
+        currency:
+          type: string
+          description: Payment currency
+          example: "USD"
+        payment_method:
+          type: string
+          description: Payment method
+          example: "card"
+        description:
+          type: string
+          description: Payment description
+          example: "Movie ticket payment"
+
+    PaymentResponse:
+      type: object
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+          description: Unique payment identifier
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        status:
+          type: string
+          enum: [succeeded, failed]
+          description: Payment status
+          example: "succeeded"
+        amount:
+          type: number
+          format: float
+          description: Payment amount
+          example: 100.50
+        currency:
+          type: string
+          description: Payment currency
+          example: "USD"
+        created_at:
+          type: string
+          format: date-time
+          description: Payment creation timestamp
+          example: "2024-03-20T10:00:00Z"
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Error message
+          example: "Invalid request format"

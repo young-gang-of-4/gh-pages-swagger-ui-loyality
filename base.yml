@@ -1,0 +1,42 @@
+openapi: 3.1.0
+info:
+  title: Promo Code Service API
+  version: 1.0.0
+  description: |
+    API for managing and validating promo codes
+    Система лояльности для онлайн-кинотеатра: покупка платной версии, триал, скидки, генерация промокодов, применение,
+    отслеживание отказов и откат, если оплата не прошла.
+    - "POST /subscribe { user_id, subscription_id }"
+    - "PATCH /subscribe/{subscribe_order_id} { user_id, promo_code }"
+    - "Backend проверяет код и возвращает price_after_discount"
+    - "Клиент платит price_after_discount"
+    - "Если провал — POST /promo/revert { user_id, promo_id, subscribe_id }"
+    - "Админ: GET /promo, GET /promo/{promo_id}, GET /promo/failures/{promo_id}"
+
+servers:
+  - url: https://api.yourcinema.example/v1
+    description: Основной продакшн сервер
+  - url: https://staging-api.yourcinema.example/v1
+    description: Стейджинг для тестов
+
+security:
+  - api_key_auth: []
+
+# stitch in path sets:
+paths:
+  /subscribe:
+    $ref: './subscriptions.yml#/paths/~1subscribe'
+  /subscribe/{subscribe_order_id}:
+    $ref: './subscriptions.yml#/paths/~1subscribe~1{subscribe_order_id}'
+  /promo:
+    $ref: './promo.yml#/paths/~1promo'
+  /promo/{promo_id}:
+    $ref: './promo.yml#/paths/~1promo~1{promo_id}'
+  /promo/apply:
+    $ref: './promo.yml#/paths/~1promo~1apply'
+  /promo/revert:
+    $ref: './promo.yml#/paths/~1promo~1revert'
+  /promo/generate:
+    $ref: './promo.yml#/paths/~1promo~1generate'
+  /api/v1/payments:
+    $ref: './mini_billing_service.yml#/paths/~1api~1v1~1payments'

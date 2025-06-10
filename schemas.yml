@@ -1,0 +1,68 @@
+components:
+  schemas:
+    error_response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Invalid promo code"
+
+    404_error_response:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 404
+        message:
+          type: string
+          example: "Not found"
+
+    subscribe_request:
+      type: object
+      required:
+        - user_id
+        - subscription_id
+      properties:
+        user_id:
+          type: string
+          description: ID пользователя в системе
+        subscription_id:
+          type: string
+          description: ID подписки в системе
+
+    subscribe_order_response:
+      type: object
+      properties:
+        subscribe_id:
+          type: string
+          description: Уникальный ID покупки
+        applied_promo_code:
+          type: string
+          nullable: true
+          description: Если промокод успешно применён, тут его код
+        price_before_discount:
+          type: number
+          format: float
+          description: Исходная сумма к оплате до учета скидки
+        price_after_discount:
+          type: number
+          format: float
+          description: Итоговая сумма к оплате после учёта скидки
+        status:
+          type: string
+          enum: [created, payment_pending, paid, payment_failed, cancelled]
+          description: Статус оплаты
+
+    apply_promo_request:
+      type: object
+      required:
+        - user_id
+        - prome_code
+      properties:
+        user_id:
+          type: string
+        prome_code:
+          type: string
