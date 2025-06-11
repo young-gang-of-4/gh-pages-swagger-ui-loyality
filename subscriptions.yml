@@ -5,11 +5,13 @@ info:
     Система лояльности для онлайн-кинотеатра: покупка платной версии, триал, скидки, генерация промокодов, применение,
     отслеживание отказов и откат, если оплата не прошла.
     - "POST /subscribe { user_id, subscription_id }"
-    - "PATCH /subscribe/{subscribe_order_id} { user_id, promo_code }"
+    - Применяем или изменяем промокод после создания заказа.
+    - "PATCH /subscribe/{subscribe_order_id, user_id, promo_code }"
     - "Backend проверяет код и возвращает price_after_discount"
     - "Клиент платит price_after_discount"
+    - "POST /subscribe/pay { user_id, subscribe_order_id }"
+    - "POST /payments { user_id, amount, currency, "payment_method": "card" }"
     - "Если провал — POST /promo/revert { user_id, promo_id, subscribe_id }"
-    - "Админ: GET /promo, GET /promo/{promo_id}, GET /promo/failures/{promo_id}"
   version: "1.0.2"
 
 servers:
@@ -20,6 +22,87 @@ servers:
 
 security:
   - api_key_auth: []
+
+paths:
+  /subscribe:
+    post:
+      summary: "Создать покупку (платная версия или триал) с опциональным промокодом"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/subscribe_order_request'
+      responses:
+        '201':
+          description: "Инфо о созданной покупке"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_order_response'
+        '400':
+          description: "Неверный запрос или код недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+    patch:
+      summary: "Добавить промокод к существующему заказу"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/apply_promo_request'
+      responses:
+        '200':
+          description: "Обновлённый заказ"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_order_response'
+        '400':
+          description: "Невалидный запрос или промокод недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: "Заказ не найден"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/404_error_response'
+
+  /subscribe/pay:
+    post:
+      summary: "Оплатить существующий заказ"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/order_payment_request'
+      responses:
+        '200':
+          description: "Заказ оплачен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_order_response'
+        '400':
+          description: "Неверный запрос или код недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+        '404':
+          description: "Заказ не найден"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/404_error_response'
 
 components:
   schemas:
@@ -43,6 +126,64 @@ components:
           type: string
           example: "Not found"
 
+    subscribe_order_request:
+      type: object
+      required:
+        - user_id
+        - subscription_id
+      properties:
+        user_id:
+          type: string
+          description: ID пользователя
+        subscription_id:
+          type: string
+          description: ID плана подписки
+        promo:
+          type: string
+          nullable: true
+          description: |
+            "trial" = триал, иначе промокод для расчёта `price_after_discount`
+        price_before_discount:
+          type: number
+          format: float
+          description: Сумма до скидки
+        price_after_discount:
+          type: number
+          format: float
+          description: Сумма после скидки
+
+    subscribe_order_response:
+      type: object
+      properties:
+        subscribe_order_id:
+          type: string
+        applied_promo_code:
+          type: string
+          nullable: true
+        price_before_discount:
+          type: number
+          format: float
+        price_after_discount:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [created, payment_pending, paid, payment_failed, cancelled]
+
+    apply_promo_request:
+      type: object
+      required:
+        - user_id
+        - subscribe_order_id
+        - promo_code
+      properties:
+        user_id:
+          type: string
+        subscribe_order_id:
+          type: string
+        promo_code:
+          type: string
+
     order_payment_request:
       type: object
       required:
@@ -51,170 +192,5 @@ components:
       properties:
         user_id:
           type: string
-          description: ID пользователя в системе
         subscribe_order_id:
           type: string
-          description: ID заказа в системе
-
-    subscribe_order_request:
-      type: object
-      required:
-        - user_id
-        - subscribe_order_id
-      properties:
-        user_id:
-          type: string
-          description: ID пользователя в системе
-        subscribe_order_id:
-          type: string
-          description: Уникальный ID покупки
-        applied_promo_code:
-          type: string
-          nullable: true
-          description: Если промокод успешно применён, тут его код
-        price_before_discount:
-          type: number
-          format: float
-          description: Исходная сумма к оплате до учета скидки
-        price_after_discount:
-          type: number
-          format: float
-          description: Итоговая сумма к оплате после учёта скидки
-
-    subscribe_order_response:
-      type: object
-      properties:
-        subscribe_order_id:
-          type: string
-          description: Уникальный ID покупки
-        applied_promo_code:
-          type: string
-          nullable: true
-          description: Если промокод успешно применён, тут его код
-        price_before_discount:
-          type: number
-          format: float
-          description: Исходная сумма к оплате до учета скидки
-        price_after_discount:
-          type: number
-          format: float
-          description: Итоговая сумма к оплате после учёта скидки
-        status:
-          type: string
-          enum: [created, payment_pending, paid, payment_failed, cancelled]
-          description: Статус оплаты
-
-    apply_promo_request:
-      type: object
-      required:
-        - user_id
-        - prome_code
-      properties:
-        user_id:
-          type: string
-        prome_code:
-          type: string
-
-
-paths:
-  /subscribe:
-    post:
-      summary: "Создать покупку (платная версия или триал) с опциональным промокодом"
-      parameters:
-        - in: query
-          name: promo
-          schema:
-            type: string
-          description: |
-            promo = trial → триал; иначе проверить код и вернуть `price_after_discount`.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/subscribe_order_request'
-      responses:
-        '201':
-          description: "Информация о созданной покупке"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/subscribe_order_response'
-        '400':
-          description: "Неверный запрос или промокод недействителен"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'
-
-  /subscribe/{subscribe_order_id}:
-    patch:
-      summary: "Добавить промокод к существующей покупке подписки"
-      parameters:
-        - in: path
-          name: subscribe_order_id
-          schema:
-            type: string
-          description: Уникальный ID заказа подписки
-          required: true
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/apply_promo_request'
-      responses:
-        '200':
-          description: "Обновлённый заказ подписки"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/subscribe_order_response'
-        '400':
-          description: "Невалидный запрос или промокод недействителен"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'
-        '404':
-          description: "Заказ подписки не найден"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/404_error_response'
-
-  /subscribe/{subscribe_order_id}/pay:
-    post:
-      summary: "Добавить промокод к существующей покупке подписки"
-      parameters:
-        - in: path
-          name: subscribe_order_id
-          schema:
-            type: string
-          description: Уникальный ID заказа подписки
-          required: true
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/order_payment_request'
-      responses:
-        '200':
-          description: "Обновлённый заказ подписки"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/subscribe_order_response'
-        '400':
-          description: "Невалидный запрос или промокод недействителен"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'
-        '404':
-          description: "Заказ подписки не найден"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/404_error_response'
