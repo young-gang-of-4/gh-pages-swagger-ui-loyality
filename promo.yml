@@ -1,324 +1,330 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
-  title: Loyalty & Promo API for Online Cinema
-  description: |
-    Система лояльности для онлайн-кинотеатра: покупка платной версии, триал, скидки, генерация промокодов, применение,
-    отслеживание отказов и откат, если оплата не прошла.
-    - "POST /subscribe { user_id, subscription_id }"
-    - "PATCH /subscribe/{subscribe_order_id} { user_id, promo_code }"
-    - "Backend проверяет код и возвращает price_after_discount"
-    - "Клиент платит price_after_discount"
-    - "Если провал — POST /promo/revert { user_id, promo_id, subscribe_id }"
-    - "Админ: GET /promo, GET /promo/{promo_id}, GET /promo/failures/{promo_id}"
-  version: "1.0.2"
+  title: Promo Code Service API
+  description: API for managing and validating promo codes
+  version: 1.0.0
 
-servers:
-  - url: https://api.yourcinema.example/v1
-    description: Основной продакшн сервер
-  - url: https://staging-api.yourcinema.example/v1
-    description: Стейджинг для тестов
+paths:
+  /promo_codes:
+    post:
+      summary: Create a new promo code
+      description: Create a new promo code with specified parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromoCodeCreate"
+      responses:
+        "201":
+          description: Promo code created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromoCode"
+        "400":
+          description: Invalid input
+        "409":
+          description: Promo code already exists
 
-security:
-  - api_key_auth: []
+    get:
+      summary: List all promo codes
+      description: Retrieve a list of all promo codes with optional filtering
+      parameters:
+        - $ref: "#/components/parameters/isActive"
+        - $ref: "#/components/parameters/codeType"
+        - $ref: "#/components/parameters/expired"
+      responses:
+        "200":
+          description: A list of promo codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PromoCode"
+
+  /promo_codes/{code}:
+    get:
+      summary: Get promo code details
+      description: Retrieve details about a specific promo code
+      parameters:
+        - $ref: "#/components/parameters/code"
+      responses:
+        "200":
+          description: Promo code details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromoCode"
+        "404":
+          description: Promo code not found
+
+    delete:
+      summary: Delete a promo code
+      description: Mark a promo code as inactive (soft delete)
+      parameters:
+        - $ref: "#/components/parameters/code"
+      responses:
+        "204":
+          description: Promo code deleted successfully
+        "404":
+          description: Promo code not found
+
+  /promo_codes/{code}/validate:
+    post:
+      summary: Validate a promo code
+      description: Check if a promo code is valid for use
+      parameters:
+        - $ref: "#/components/parameters/code"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidationRequest"
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResponse"
+        "404":
+          description: Promo code not found
+  
+  /promo_codes/generate:
+    post:
+      summary: "Generate promo codes"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromoCodeGenerate"
+      responses:
+        '201':
+          description: "List generated promo codes"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PromoCode"
+        "400":
+          description: Invalid input
+        "409":
+          description: Promo code already exists
 
 components:
   schemas:
-    error_response:
+    PromoCodeCreate:
       type: object
-      properties:
-        code:
-          type: integer
-          example: 400
-        message:
-          type: string
-          example: "Invalid promo code"
-    404_error_response:
-      type: object
-      properties:
-        code:
-          type: integer
-          example: 404
-        message:
-          type: string
-          example: "Not found"
-
-    promo_code:
-      type: object
+      required:
+        - code
+        - type
+        - valid_from
+        - valid_to
       properties:
         code:
           type: string
-          description: Уникальный текст промокода
-        discount_percent:
-          type: integer
-          minimum: 0
-          maximum: 100
-          description: Процент скидки (M%)
-        valid_until:
-          type: string
-          format: date-time
-          nullable: true
-          description: Дата истечения срока (null = бессрочный)
-        usage_limit:
-          type: integer
-          nullable: true
-          description: Сколько раз можно применить (null = безлимит)
-        used_count:
-          type: integer
-          description: Сколько раз уже применили
-        single_use:
-          type: boolean
-          description: true = отрабатывает один раз и становится неактивным
-        multi_use:
-          type: boolean
-          description: true = действует до исчерпания usage_limit
+          description: The actual promo code string
+          example: "SUMMER2023"
         description:
           type: string
-          nullable: true
-          description: Заметка/назначение промокода
-
-    promo_code_response:
-      type: object
-      properties:
-        id:
+          description: Optional description of the promo code
+          example: "Summer discount 2023"
+        type:
           type: string
-          description: Внутренний ID промокода
-        code:
-          type: string
-        discount_percent:
+          enum: [single_use, multi_use, unlimited]
+          description: Type of promo code usage
+          example: "multi_use"
+        max_uses:
           type: integer
-        valid_until:
+          description: Maximum number of uses (required for multi_use type)
+          example: 100
+        discount_type:
+          type: string
+          enum: [percentage, fixed_amount]
+          description: Type of discount
+          example: "percentage"
+        discount_value:
+          type: number
+          description: Value of discount (percentage or fixed amount)
+          example: 20
+        valid_from:
           type: string
           format: date-time
-          nullable: true
-        usage_limit:
-          type: integer
-          nullable: true
-        used_count:
-          type: integer
-        single_use:
-          type: boolean
-        multi_use:
-          type: boolean
+          description: When the promo code becomes active
+          example: "2023-06-01T00:00:00Z"
+        valid_to:
+          type: string
+          format: date-time
+          description: When the promo code expires
+          example: "2023-08-31T23:59:59Z"
         is_active:
           type: boolean
-          description: true = можно применять
+          description: Whether the promo code is active
+          default: true
+          example: true
+        applicable_products:
+          type: array
+          items:
+            type: string
+          description: List of product IDs this code applies to (empty for all)
+          example: ["film_1", "film_2"]
+
+    PromoCodeGenerate:
+      type: object
+      required:
+        - prefix
+        - count
+        - length
+        - valid_from
+        - valid_to
+      properties:
+        prefix:
+          type: string
+          description: "Префикс для кода"
+        count:
+          type: integer
+          description: "Сколько кодов сгенерировать"
+        length:
+          type: integer
+          nullable: true
+          default: 8
+          description: "Длина кода вместе с префиксом"
         description:
           type: string
-          nullable: true
-
-    apply_promo_request:
-      type: object
-      required:
-        - user_id
-        - prome_code
-      properties:
-        user_id:
+          description: Optional description of the promo code
+          example: "Summer discount 2023"
+        type:
           type: string
-        prome_code:
-          type: string
-
-    apply_promo_response:
-      type: object
-      properties:
-        success:
-          type: boolean
-        code:
-          type: string
-        discount_percent:
+          enum: [single_use, multi_use, unlimited]
+          description: Type of promo code usage
+          example: "multi_use"
+        max_uses:
           type: integer
-        reason:
+          description: Maximum number of uses (required for multi_use type)
+          example: 100
+        discount_type:
           type: string
-          nullable: true
-          description: Причина отказа (если success=false)
+          enum: [percentage, fixed_amount]
+          description: Type of discount
+          example: "percentage"
+        discount_value:
+          type: number
+          description: Value of discount (percentage or fixed amount)
+          example: 20
+        valid_from:
+          type: string
+          format: date-time
+          description: When the promo code becomes active
+          example: "2023-06-01T00:00:00Z"
+        valid_to:
+          type: string
+          format: date-time
+          description: When the promo code expires
+          example: "2023-08-31T23:59:59Z"
+        is_active:
+          type: boolean
+          description: Whether the promo code is active
+          default: true
+          example: true
+        applicable_products:
+          type: array
+          items:
+            type: string
+          description: List of product IDs this code applies to (empty for all)
+          example: ["film_1", "film_2"]
 
-    revert_promo_request:
+    PromoCode:
+      allOf:
+        - $ref: "#/components/schemas/PromoCodeCreate"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: "550e8400-e29b-41d4-a716-446655440000"
+            created_at:
+              type: string
+              format: date-time
+              example: "2023-05-15T12:00:00Z"
+            updated_at:
+              type: string
+              format: date-time
+              example: "2023-05-15T12:00:00Z"
+            current_uses:
+              type: integer
+              description: Number of times the code has been used
+              example: 42
+
+    ValidationRequest:
       type: object
       required:
         - user_id
-        - promo_id
-        - subscribe_id
       properties:
         user_id:
           type: string
-        promo_id:
+          description: ID of the user attempting to use the promo code
+          example: "user_123"
+        product_id:
           type: string
-        subscribe_id:
-          type: string
-        reason:
-          type: string
-          nullable: true
-          description: Причина отката (например, оплата не прошла)
+          description: ID of the product being purchased (for product-specific codes)
+          example: "prod_123"
+        order_amount:
+          type: number
+          description: Total order amount (for minimum order validations)
+          example: 100.50
 
-    revert_promo_response:
+    ValidationResponse:
       type: object
       properties:
-        success:
+        is_valid:
           type: boolean
-        message:
+          description: Whether the promo code is valid for this use
+          example: true
+        discount_amount:
+          type: number
+          description: Calculated discount amount if valid
+          example: 20.10
+        error_message:
           type: string
-          nullable: true
+          description: Error message if not valid
+          example: "Promo code has expired"
+        code_details:
+          $ref: "#/components/schemas/PromoCode"
 
-  securitySchemes:
-    api_key_auth:
-      type: apiKey
-      in: header
-      name: X-API-Key
 
-paths:
-  /promo:
-    post:
-      summary: "Сгенерировать новый promo code"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [code, discount_percent, single_use]
-              properties:
-                code: { type: string }
-                discount_percent: { type: integer }
-                valid_until: { type: string, format: date-time, nullable: true }
-                usage_limit: { type: integer, nullable: true }
-                single_use: { type: boolean }
-                multi_use: { type: boolean }
-                description: { type: string, nullable: true }
-      responses:
-        '201':
-          description: "Промокод создан"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/promo_code_response'
-        '400':
-          description: "Невалидные данные"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'
+  parameters:
+    code:
+      name: code
+      in: path
+      description: Promo code string
+      required: true
+      schema:
+        type: string
+    isActive:
+      name: is_active
+      in: query
+      description: Filter by active status
+      required: false
+      schema:
+        type: boolean
+    codeType:
+      name: type
+      in: query
+      description: Filter by promo code type
+      required: false
+      schema:
+        type: string
+        enum: [single_use, multi_use, unlimited]
+    expired:
+      name: expired
+      in: query
+      description: Filter by expired status
+      required: false
+      schema:
+        type: boolean
 
-  /promo/{promo_id}:
-    get:
-      summary: "Получить информацию о промокоде"
-      parameters:
-        - in: path
-          name: promo_id
-          schema: { type: string }
-      responses:
-        '200':
-          description: "Данные промокода"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/promo_code_response'
-        '404':
-          description: "Не найден промокод"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/404_error_response'
-
-    delete:
-      summary: "Деактивировать промокод"
-      parameters:
-        - in: path
-          name: promo_id
-          schema: { type: string }
-      responses:
-        '200':
-          description: "Промокод деактивирован"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-        '404':
-          description: "Не найден промокод"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/404_error_response'
-
-  /promo/apply:
-    post:
-      summary: "Применить промокод вручную"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/apply_promo_request'
-      responses:
-        '200':
-          description: "Результат применения"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/apply_promo_response'
-        '400':
-          description: "Невалидный запрос или код недействителен"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'
-
-  /promo/revert:
-    post:
-      summary: "Откат применения промокода"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/revert_promo_request'
-      responses:
-        '200':
-          description: "Промокод восстановлён"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/revert_promo_response'
-        '400':
-          description: "Невалидный запрос"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'
-
-  /promo/generate:
-    post:
-      summary: "Массовая генерация промокодов"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [prefix, count, discount_percent, single_use]
-              properties:
-                prefix: { type: string }
-                count: { type: integer }
-                length: { type: integer, nullable: true, default: 8 }
-                discount_percent: { type: integer }
-                valid_until: { type: string, format: date-time, nullable: true }
-                usage_limit: { type: integer, nullable: true }
-                single_use: { type: boolean }
-                multi_use: { type: boolean }
-      responses:
-        '201':
-          description: "Список сгенерированных кодов"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  generated:
-                    type: array
-                    items: { type: string }
-        '400':
-          description: "Невалидные данные"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error_response'

@@ -6,11 +6,10 @@ info:
     API for managing and validating promo codes
     Avaiable openapi files to explore:
       - ../base.yml
-      - ../promo2.yml
       - ../promo.yml
       - ../billing.yml
       - ../subscriptions.yml
-
+      - ../promo_old.yml
 
 servers:
   - url: https://api.yourcinema.example/v1
@@ -27,15 +26,26 @@ paths:
     $ref: './subscriptions.yml#/paths/~1subscribe'
   /subscribe/pay:
     $ref: './subscriptions.yml#/paths/~1subscribe~1pay'
-  /promo:
-    $ref: './promo.yml#/paths/~1promo'
-  /promo/{promo_id}:
-    $ref: './promo.yml#/paths/~1promo~1{promo_id}'
-  /promo/apply:
-    $ref: './promo.yml#/paths/~1promo~1apply'
-  /promo/revert:
-    $ref: './promo.yml#/paths/~1promo~1revert'
-  /promo/generate:
-    $ref: './promo.yml#/paths/~1promo~1generate'
+
+  /promo_codes:
+    $ref: './promo.yml#/paths/~1promo_codes'
+  /promo_codes/generate:
+    $ref: './promo.yml#/paths/~1promo_codes~1generate'
+  /promo_codes/{code}:
+    $ref: './promo.yml#/paths/~1promo_codes~1{code}'
+  /promo_codes/{code}/validate:
+    $ref: './promo.yml#/paths/~1promo_codes~1{code}~1validate'
+
   /api/v1/payments:
     $ref: './billing.yml#/paths/~1api~1v1~1payments'
+
+  # /promo:
+  #   $ref: './promo_old.yml#/paths/~1promo'
+  # /promo/{promo_id}:
+  #   $ref: './promo_old.yml#/paths/~1promo~1{promo_id}'
+  # /promo/apply:
+  #   $ref: './promo_old.yml#/paths/~1promo~1apply'
+  # /promo/revert:
+  #   $ref: './promo_old.yml#/paths/~1promo~1revert'
+  # /promo/generate:
+  #   $ref: './promo_old.yml#/paths/~1promo~1generate'
