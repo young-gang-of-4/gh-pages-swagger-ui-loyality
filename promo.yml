@@ -115,6 +115,44 @@ paths:
           description: Invalid input
         "409":
           description: Promo code already exists
+    
+  /promo_codes/apply:
+    post:
+      summary: "Apply promo code"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyPromoCodeRequest'
+      responses:
+        '200':
+          description: "Apply result"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplyPromoCodeResponse'
+        "400":
+          description: Invalid input
+
+  /promo_codes/revert:
+    post:
+      summary: "Revert promo code"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevertPromoCodeRequest'
+      responses:
+        '200':
+          description: "Promo code reverted"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevertPromoCodeResponse'
+        "400":
+          description: Invalid input
 
 components:
   schemas:
@@ -295,6 +333,65 @@ components:
           example: "Promo code has expired"
         code_details:
           $ref: "#/components/schemas/PromoCode"
+    
+    ApplyPromoCodeRequest:
+      type: object
+      required:
+        - user_id
+        - prome_code
+      properties:
+        user_id:
+          type: string
+        prome_code:
+          type: string
+
+    ApplyPromoCodeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        discount_type:
+          type: string
+          enum: [percentage, fixed_amount]
+          description: Type of discount
+          example: "percentage"
+        discount_value:
+          type: number
+          description: Value of discount (percentage or fixed amount)
+          example: 20
+        reason:
+          type: string
+          nullable: true
+          description: Причина отказа (если success=false)
+
+    RevertPromoCodeRequest:
+      type: object
+      required:
+        - user_id
+        - promo_id
+        - subscribe_id
+      properties:
+        user_id:
+          type: string
+        promo_id:
+          type: string
+        subscribe_id:
+          type: string
+        reason:
+          type: string
+          nullable: true
+          description: Причина отката (например, оплата не прошла)
+
+    RevertPromoCodeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+          nullable: true
 
 
   parameters:
@@ -327,4 +424,3 @@ components:
       required: false
       schema:
         type: boolean
-

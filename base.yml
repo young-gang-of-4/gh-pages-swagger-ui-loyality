@@ -31,6 +31,10 @@ paths:
     $ref: './promo.yml#/paths/~1promo_codes'
   /promo_codes/generate:
     $ref: './promo.yml#/paths/~1promo_codes~1generate'
+  /promo_codes/apply:
+    $ref: './promo.yml#/paths/~1promo_codes~1apply'
+  /promo_codes/revert:
+    $ref: './promo.yml#/paths/~1promo_codes~1revert'
   /promo_codes/{code}:
     $ref: './promo.yml#/paths/~1promo_codes~1{code}'
   /promo_codes/{code}/validate:
