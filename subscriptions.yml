@@ -6,7 +6,7 @@ info:
     отслеживание отказов и откат, если оплата не прошла.
     - "POST /subscribe { user_id, subscription_id }"
     - Применяем или изменяем промокод после создания заказа.
-    - "PATCH /subscribe/{subscribe_order_id, user_id, promo_code }"
+    - "PATCH /subscribe {subscribe_order_id, user_id, promo_code }"
     - "Backend проверяет код и возвращает price_after_discount"
     - "Клиент платит price_after_discount"
     - "POST /subscribe/pay { user_id, subscribe_order_id }"
@@ -114,7 +114,7 @@ components:
           example: 400
         message:
           type: string
-          example: "Invalid promo code"
+          example: "Invalid request"
 
     404_error_response:
       type: object
@@ -134,28 +134,20 @@ components:
       properties:
         user_id:
           type: string
-          description: ID пользователя
         subscription_id:
           type: string
-          description: ID плана подписки
         promo:
           type: string
           nullable: true
           description: |
             "trial" = триал, иначе промокод для расчёта `price_after_discount`
-        price_before_discount:
-          type: number
-          format: float
-          description: Сумма до скидки
-        price_after_discount:
-          type: number
-          format: float
-          description: Сумма после скидки
 
     subscribe_order_response:
       type: object
       properties:
         subscribe_order_id:
+          type: string
+        subscription_id:
           type: string
         applied_promo_code:
           type: string
@@ -175,14 +167,21 @@ components:
       required:
         - user_id
         - subscribe_order_id
-        - promo_code
+        - subscription_id
       properties:
         user_id:
           type: string
+          description: ID пользователя
         subscribe_order_id:
           type: string
-        promo_code:
+          description: ID плана подписки
+        subscription_id:
           type: string
+        promo:
+          type: string
+          nullable: true
+          description: |
+            "trial" = триал, иначе промокод для расчёта `price_after_discount`
 
     order_payment_request:
       type: object
