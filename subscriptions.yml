@@ -25,6 +25,45 @@ security:
 
 paths:
   /subscribe:
+    get:
+      summary: "Получить стоимость подписки с опциональным промокодом"
+      parameters:
+        - in: query
+          name: promo
+          schema:
+            type: string
+          description: |
+            promo = trial → триал; иначе проверить код и вернуть `price_after_discount`.
+      responses:
+        '201':
+          description: "Информация о созданной покупке"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_cost_response'
+        '400':
+          description: "Неверный запрос или промокод недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
+
+  /subscribe/checkout:
+    get:
+      summary: "Получить созданый пользователем заказ и его статус"
+      responses:
+        '200':
+          description: "Информация о созданной покупке"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/subscribe_order_response'
+        '400':
+          description: "Неверный запрос или промокод недействителен"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error_response'
     post:
       summary: "Создать покупку (платная версия или триал) с опциональным промокодом"
       requestBody:
@@ -126,14 +165,26 @@ components:
           type: string
           example: "Not found"
 
+    subscribe_cost_response:
+      type: object
+      properties:
+        subscription_id:
+          type: string
+        applied_promo_code:
+          type: string
+          nullable: true
+        price_before_discount:
+          type: number
+          format: float
+        price_after_discount:
+          type: number
+          format: float
+
     subscribe_order_request:
       type: object
       required:
-        - user_id
         - subscription_id
       properties:
-        user_id:
-          type: string
         subscription_id:
           type: string
         promo:
@@ -186,10 +237,7 @@ components:
     order_payment_request:
       type: object
       required:
-        - user_id
         - subscribe_order_id
       properties:
-        user_id:
-          type: string
         subscribe_order_id:
           type: string

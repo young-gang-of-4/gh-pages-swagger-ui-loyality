@@ -24,6 +24,8 @@ security:
 paths:
   /subscribe:
     $ref: './subscriptions.yml#/paths/~1subscribe'
+  /subscribe/checkout:
+    $ref: './subscriptions.yml#/paths/~1subscribe~1checkout'
   /subscribe/pay:
     $ref: './subscriptions.yml#/paths/~1subscribe~1pay'
 
