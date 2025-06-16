@@ -4,7 +4,7 @@ info:
   description: |
     Система лояльности для онлайн-кинотеатра: покупка платной версии, триал, скидки, генерация промокодов, применение,
     отслеживание отказов и откат, если оплата не прошла.
-    - "POST /subscribe { user_id, subscription_id }"
+    - "POST /subscribe { user_id, subscription_type }"
     - Применяем или изменяем промокод после создания заказа.
     - "PATCH /subscribe {subscribe_order_id, user_id, promo_code }"
     - "Backend проверяет код и возвращает price_after_discount"
@@ -168,8 +168,9 @@ components:
     subscribe_cost_response:
       type: object
       properties:
-        subscription_id:
+        subscription_type:
           type: string
+          enum: [month, year]
         applied_promo_code:
           type: string
           nullable: true
@@ -183,10 +184,11 @@ components:
     subscribe_order_request:
       type: object
       required:
-        - subscription_id
+        - subscription_type
       properties:
-        subscription_id:
+        subscription_type:
           type: string
+          enum: [month, year]
         promo:
           type: string
           nullable: true
@@ -198,8 +200,9 @@ components:
       properties:
         subscribe_order_id:
           type: string
-        subscription_id:
+        subscription_type:
           type: string
+          enum: [month, year]
         applied_promo_code:
           type: string
           nullable: true
@@ -218,7 +221,7 @@ components:
       required:
         - user_id
         - subscribe_order_id
-        - subscription_id
+        - subscription_type
       properties:
         user_id:
           type: string
@@ -226,8 +229,9 @@ components:
         subscribe_order_id:
           type: string
           description: ID плана подписки
-        subscription_id:
+        subscription_type:
           type: string
+          enum: [month, year]
         promo:
           type: string
           nullable: true
